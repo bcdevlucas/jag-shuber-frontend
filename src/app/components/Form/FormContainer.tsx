@@ -5,6 +5,9 @@ import { Dispatch } from 'redux';
 import { FormErrors } from 'redux-form';
 import { deletedDiff, detailedDiff } from 'deep-object-diff';
 
+// There's no export for this...
+const preserveArray = require('deep-object-diff/dist/preseveArray');
+
 export interface FormContainerProps<T = any> {
     // TODO: We aren't really using objectId anymore, we should remove it...
     //  It's a remnant from converting the SheriffProfilePlugin to the current
@@ -53,6 +56,19 @@ export interface FormContainer<T = any> {
     getData(state: RootState, filters?: {} | undefined): T | undefined;
     validate(values: T): FormErrors<T> | undefined;
 }
+
+export interface FormValues {
+    added: any[];
+    updated: any[];
+    expired: any[];
+    expiredIds: IdType[];
+    unexpired: any[];
+    unexpiredIds: IdType[];
+    deleted: any[];
+    deletedIds: IdType[];
+}
+
+export type FormValuesDiff = { [key: string]: FormValues };
 
 export abstract class FormContainerBase<T = any> implements FormContainer<T> {
     /**
@@ -134,7 +150,27 @@ export abstract class FormContainerBase<T = any> implements FormContainer<T> {
         return this.pluginPermissions || [];
     }
 
-    protected getDataFromFormValues(formValues: any, initialValues?: any) {
+    protected mapDeletesFromFormValues(map: {}) {
+        return {};
+    }
+
+    protected mapExpiredFromFormValues(map: {}, isExpired?: boolean) {
+        return {};
+    }
+
+    protected getFilterData(filters: any) {
+        return Object.keys(this.filterFieldNames)
+            .reduce((data: any, filterKey: string, idx: number) => {
+                const dataKey = this.filterFieldNames[filterKey]
+                    .split(`${this.reduxFormKey}.`).pop() as string;
+
+                if (filters[filterKey]) data[dataKey] = filters[filterKey];
+
+                return data;
+            }, {});
+    }
+
+    /* protected getDataFromFormValues(formValues: any, initialValues?: any) {
         if (!initialValues) return formValues[this.reduxFormKey];
 
         const initial = initialValues[this.reduxFormKey];
@@ -157,29 +193,123 @@ export abstract class FormContainerBase<T = any> implements FormContainer<T> {
         });
 
         return data;
+    } */
+
+    /**
+     * @param values
+     * @param normalizeFn A function to flatten the values
+     */
+    protected getAddedFormValues(values: any, normalizeFn?: (values: any) => any[]) {
+        values = normalizeFn ? normalizeFn(values) : values;
+        return values
+            .filter((value: any) => !value.id);
     }
 
-    protected mapDeletesFromFormValues(map: {}) {
-        return {};
+    protected getUpdatedFormValues(
+        initialFormValues: any,
+        updatedFormValues: any,
+        normalizeFn?: (values: any) => any[]
+    ) {
+        initialFormValues = normalizeFn ? normalizeFn(initialFormValues) : initialFormValues;
+        updatedFormValues = normalizeFn ? normalizeFn(updatedFormValues) : updatedFormValues;
+
+        const initialFormValueIds = initialFormValues
+            .filter((value: any) => !!value)
+            .map((value: any) => value.id);
+
+        return updatedFormValues
+            .filter((value: any) => !!value.id)
+            .filter((value: any) => initialFormValueIds.includes(value.id))
+            .filter((value: any) => initialFormValues
+                .find((initValue: any) =>
+                    (value.id === initValue.id) &&
+                    (JSON.stringify(value) !== JSON.stringify(initValue))
+                )
+            )
+            .filter((value: any) => value && !value.isExpired);
     }
 
-    protected mapExpiredFromFormValues(map: {}, isExpired?: boolean) {
-        return {};
+    protected getExpiredFormValues(
+        initialFormValues: any,
+        updatedFormValues: any,
+        normalizeFn?: (values: any) => any[]
+    ) {
+        initialFormValues = normalizeFn ? normalizeFn(initialFormValues) : initialFormValues;
+        updatedFormValues = normalizeFn ? normalizeFn(updatedFormValues) : updatedFormValues;
+
+        const initialFormValueIds = initialFormValues
+            .filter((value: any) => !!value)
+            .map((value: any) => value.id);
+
+        return updatedFormValues
+            .filter((value: any) => !!value.id)
+            .filter((value: any) => initialFormValueIds.includes(value.id))
+            .filter((value: any) => value && value.isExpired && initialFormValues
+                .find((initValue: any) => value.id === initValue.id && !initValue.isExpired));
     }
 
-    protected getFilterData(filters: any) {
-        return Object.keys(this.filterFieldNames)
-            .reduce((data: any, filterKey: string, idx: number) => {
-                const dataKey = this.filterFieldNames[filterKey]
-                    .split(`${this.reduxFormKey}.`).pop() as string;
+    protected getUnexpiredFormValues(
+        initialFormValues: any,
+        updatedFormValues: any,
+        normalizeFn?: (values: any) => any[]
+    ) {
+        initialFormValues = normalizeFn ? normalizeFn(initialFormValues) : initialFormValues;
+        updatedFormValues = normalizeFn ? normalizeFn(updatedFormValues) : updatedFormValues;
 
-                if (filters[filterKey]) data[dataKey] = filters[filterKey];
+        const initialFormValueIds = initialFormValues
+            .filter((value: any) => !!value)
+            .map((value: any) => value.id);
 
-                return data;
-            }, {});
+        return updatedFormValues
+            .filter((value: any) => !!value.id)
+            .filter((value: any) => initialFormValueIds.includes(value.id))
+            .filter((value: any) => value && !value.isExpired && initialFormValues
+                .find((initValue: any) => value.id === initValue.id && initValue.isExpired));
     }
 
-    protected getDataToDeleteFromFormValues(formValues: any, initialValues?: any) {
+    protected getDeletedFormValues(
+        initialFormValues: any,
+        updatedFormValues: any,
+        normalizeFn?: (values: any) => any[]
+    ) {
+        initialFormValues = normalizeFn ? normalizeFn(initialFormValues) : initialFormValues;
+        updatedFormValues = normalizeFn ? normalizeFn(updatedFormValues) : updatedFormValues;
+
+        const updatedFormValueIds = updatedFormValues
+            .filter((value: any) => !!value)
+            .map((value: any) => value.id);
+
+        return initialFormValues
+            .filter((value: any) => !updatedFormValueIds.includes(value.id));
+    }
+
+    protected getIdsFromFormValues(formValues: any) {
+        return formValues.map((value: any) => value.id);
+    }
+
+    protected processGroupedFormValues(
+        initialFormValues: any,
+        updatedFormValues?: any,
+        callback?: any
+    ) {
+        const initialValues = Object.keys(initialFormValues)
+            .reduce((acc: any, cur: any) => {
+                return acc.concat(initialFormValues[cur]);
+            }, []);
+
+        const updatedValues = Object.keys(updatedFormValues)
+            .reduce((acc: any, cur: any) => {
+                return acc.concat(updatedFormValues[cur]);
+            }, []);
+
+        return callback(initialValues, updatedValues);
+    }
+
+    protected getDataFromFormValues(
+        formValues: any,
+        initialValues?: any,
+        formKey?: string
+    ): FormValuesDiff | FormValues {
         if (!initialValues) return formValues[this.reduxFormKey];
 
         const initial = initialValues[this.reduxFormKey];
@@ -187,47 +317,37 @@ export abstract class FormContainerBase<T = any> implements FormContainer<T> {
 
         let map: any = {};
 
-        // TODO: Use value, instead of key - redux-form is bound using the value
-        // We can check the path using containsPropertyPath which is on this class
         const formKeys = Object.keys(this.formFieldNames);
         formKeys.forEach(key => {
-            let isDirty = false;
-            const diff = deletedDiff(initial[key], values[key]);
-            if (Object.keys(diff).length > 0) isDirty = true;
+            const addedFormValues = this.getAddedFormValues(values[key]);
+            const updatedFormValues = this.getUpdatedFormValues(initial[key], values[key]);
+            const expiredFormValues = this.getExpiredFormValues(initial[key], values[key]);
+            const unexpiredFormValues = this.getUnexpiredFormValues(initial[key], values[key]);
+            const deletedFormValues = this.getDeletedFormValues(initial[key], values[key]);
 
-            if (isDirty) map[key] = { initialValues: initial[key], values: values[key] };
+            const expiredFormValueIds = this.getIdsFromFormValues(expiredFormValues);
+            const unexpiredFormValueIds = this.getIdsFromFormValues(unexpiredFormValues);
+            const deletedFormValueIds = this.getIdsFromFormValues(deletedFormValues);
+
+            const diff = {
+                added: addedFormValues,
+                updated: updatedFormValues,
+                expired: expiredFormValues,
+                expiredIds: expiredFormValueIds,
+                unexpired: unexpiredFormValues,
+                unexpiredIds: unexpiredFormValueIds,
+                deleted: deletedFormValues,
+                deletedIds: deletedFormValueIds
+            };
+
+            if (formKey && formKey === key) {
+                map[key] = diff;
+            } else if (!formKey) {
+                map[key] = diff;
+            }
         });
 
-        return this.mapDeletesFromFormValues(map);
-    }
-
-    // TODO: Use a const or something to set the expired key, or make it configurable
-    protected getDataToExpireFromFormValues(formValues: any, initialValues?: any, isExpired?: boolean) {
-        isExpired = isExpired || false;
-        if (!initialValues) return formValues[this.reduxFormKey];
-
-        const initial = initialValues[this.reduxFormKey];
-        const values = formValues[this.reduxFormKey];
-
-        let map: any = {};
-
-        // TODO: Use value, instead of key - redux-form is bound using the value
-        // We can check the path using containsPropertyPath which is on this class
-        const formKeys = Object.keys(this.formFieldNames);
-        // detailedDiff will return a diff object with added, deleted, and updated keys
-        // https://www.npmjs.com/package/deep-object-diff
-        const diffKeys = ['updated'];
-        formKeys.forEach(key => {
-            let isDirty = false;
-            const diff = detailedDiff(initial[key], values[key]);
-            diffKeys.forEach(diffKey => {
-                if (Object.keys(diff[diffKey]).length > 0) isDirty = true;
-            });
-
-            if (isDirty) map[key] = { initialValues: initial[key], values: values[key] };
-        });
-
-        return this.mapExpiredFromFormValues(map, isExpired);
+        return formKey ? map[formKey] as FormValues : map as FormValuesDiff;
     }
 
     // TODO: At some point, we should consolidate common functions between FormContainer and SheriffProfilePlugin

@@ -70,7 +70,7 @@ import { IdType } from '../../api';
 
 import {
     FormContainerBase,
-    FormContainerProps,
+    FormContainerProps, FormValues, FormValuesDiff,
 } from '../../components/Form/FormContainer';
 
 import DataTable, { EmptyDetailRow } from '../../components/Table/DataTable';
@@ -109,44 +109,10 @@ export interface AdminRolesProps extends FormContainerProps {
 
 export interface AdminRolesDisplayProps extends FormContainerProps {}
 
-class AdminRolesDisplay extends React.PureComponent<AdminRolesDisplayProps, {}> {
+class AdminRolesDisplay extends React.PureComponent<AdminRolesDisplayProps, any> {
     render() {
-        const { data = [] } = this.props;
-
-        // TODO: Rip out dummy data
-        const testData = [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }, { id: 5 }];
         return (
-            <div>
-                {/*<h3>Roles</h3>*/}
-                <Table responsive={true} striped={true} >
-                    <thead>
-                        <tr>
-                            <th className="text-left">Role Name</th>
-                            <th className="text-left">Role Code</th>
-                            <th className="text-left">Description</th>
-                            <th className="text-left">Last Modified</th>
-                            <th className="text-left">Status</th>
-                            <th />
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {testData.map(r => {
-                            return (
-                                <tr key={r.id}>
-                                    <td>Test Role</td>
-                                    <td>TEST_ROLE</td>
-                                    <td>Ipsum Lorem Dolor</td>
-                                    <td>{new Date().toLocaleDateString()}</td>
-                                    <td>
-                                        Active
-                                    </td>
-                                </tr>
-                            );
-                        })}
-
-                    </tbody>
-                </Table>
-            </div>
+            <div />
         );
     }
 }
@@ -165,15 +131,7 @@ export default class AdminRoles extends FormContainerBase<AdminRolesProps> {
     reduxFormKey = 'roles';
     formFieldNames = {
         roles: 'roles.roles',
-        apiScopes: 'roles.apiScopes',
-        frontendScopes: 'roles.frontendScopes',
-        roleApiScopesGrouped: 'roles.roleApiScopesGrouped',
-        roleFrontendScopesGrouped: 'roles.roleFrontendScopesGrouped',
-        rolePermissionsGrouped: 'roles.rolePermissions',
-        roleApiPermissionsGrouped: 'roles.roleApiPermissionsGrouped',
-        roleFrontendPermissionsGrouped: 'roles.roleFrontendPermissionsGrouped',
-        roleApiScopePermissionsGrouped: 'roles.roleApiScopePermissionsGrouped',
-        roleFrontendScopePermissionsGrouped: 'roles.roleFrontendScopePermissionsGrouped'
+        roleFrontendScopesGrouped: 'roles.roleFrontendScopesGrouped'
     };
     title: string = ' Manage Roles & Access';
     DetailComponent: React.SFC<DetailComponentProps> = ({ parentModelId, parentModel, getPluginPermissions }) => {
@@ -468,60 +426,11 @@ export default class AdminRoles extends FormContainerBase<AdminRolesProps> {
         };
     }
 
-    getDataFromFormValues(formValues: {}, initialValues: {}): FormContainerProps {
-        return super.getDataFromFormValues(formValues, initialValues) || {};
-    }
-
-    mapDeletesFromFormValues(map: any) {
+    /* mapDeletesFromFormValues(map: any) {
         const deletedRoleIds: IdType[] = [];
         const deletedRoleFrontendScopeIds: IdType[] = [];
         const deletedRoleApiScopeIds: IdType[] = [];
         const deletedRolePermissionIds: IdType[] = [];
-
-        if (map.roles) {
-            const initialValues = map.roles.initialValues;
-            const existingIds = map.roles.values.map((val: any) => val.id);
-
-            const removeRoleIds = initialValues
-                .filter((val: any) => (existingIds.indexOf(val.id) === -1))
-                .map((val: any) => val.id);
-
-            deletedRoleIds.push(...removeRoleIds);
-        }
-
-        if (map.roleFrontendScopesGrouped) {
-            const initialValues = map.roleFrontendScopesGrouped.initialValues;
-
-            const removeRoleFrontendScopeIds = Object.keys(initialValues).reduce((acc: any, cur: any) => {
-                const initValues = map.roleFrontendScopesGrouped.initialValues[cur];
-                const existingIds = map.roleFrontendScopesGrouped.values[cur].map((val: any) => val.id);
-
-                const removeIds = initValues
-                    .filter((val: any) => (existingIds.indexOf(val.id) === -1))
-                    .map((val: any) => val.id);
-
-                return acc.concat(removeIds);
-            }, []);
-
-            deletedRoleFrontendScopeIds.push(...removeRoleFrontendScopeIds);
-        }
-
-        if (map.roleApiScopesGrouped) {
-            const initialValues = map.roleApiScopesGrouped.initialValues;
-
-            const removeRoleApiScopeIds = Object.keys(initialValues).reduce((acc: any, cur: any) => {
-                const initValues = map.roleApiScopesGrouped.initialValues[cur];
-                const existingIds = map.roleApiScopesGrouped.values[cur].map((val: any) => val.id);
-
-                const removeIds = initValues
-                    .filter((val: any) => (existingIds.indexOf(val.id) === -1))
-                    .map((val: any) => val.id);
-
-                return acc.concat(removeIds);
-            }, []);
-
-            deletedRoleApiScopeIds.push(...removeRoleApiScopeIds);
-        }
 
         return {
             roles: deletedRoleIds,
@@ -529,30 +438,137 @@ export default class AdminRoles extends FormContainerBase<AdminRolesProps> {
             roleApiScopes: deletedRoleApiScopeIds,
             deletedRolePermissionIds: deletedRolePermissionIds
         };
+    } */
+
+    protected getDataFromFormValues(
+        formValues: any,
+        initialValues?: any,
+        formKey?: string
+    ): FormValuesDiff | FormValues {
+        if (!initialValues) return formValues[this.reduxFormKey];
+
+        const initial = initialValues[this.reduxFormKey];
+        const values = formValues[this.reduxFormKey];
+
+        let map: any = {};
+
+        const formKeys = Object.keys(this.formFieldNames);
+        const groupedKeys: any = ['roleFrontendScopesGrouped'];
+
+        formKeys.forEach(key => {
+            let addedFormValues;
+            let updatedFormValues;
+            let expiredFormValues;
+            let unexpiredFormValues;
+            let deletedFormValues;
+
+            let expiredFormValueIds;
+            let unexpiredFormValueIds;
+            let deletedFormValueIds;
+
+            if (groupedKeys.includes(key)) {
+                addedFormValues = this.processGroupedFormValues(
+                    initial[key],
+                    values[key],
+                    (flatInitialValues: any, flatUpdatedValues: any) => {
+                        return this.getAddedFormValues(flatUpdatedValues);
+                    }
+                );
+
+                updatedFormValues = this.processGroupedFormValues(
+                    initial[key],
+                    values[key],
+                    (flatInitialValues: any, flatUpdatedValues: any) => {
+                        return this.getUpdatedFormValues(flatInitialValues, flatUpdatedValues);
+                    }
+                );
+
+                expiredFormValues = this.processGroupedFormValues(
+                    initial[key],
+                    values[key],
+                    (flatInitialValues: any, flatUpdatedValues: any) => {
+                        return this.getExpiredFormValues(flatInitialValues, flatUpdatedValues);
+                    }
+                );
+
+                unexpiredFormValues = this.processGroupedFormValues(
+                    initial[key],
+                    values[key],
+                    (flatInitialValues: any, flatUpdatedValues: any) => {
+                        return this.getUnexpiredFormValues(flatInitialValues, flatUpdatedValues);
+                    }
+                );
+
+                deletedFormValues = this.processGroupedFormValues(
+                    initial[key],
+                    values[key],
+                    (flatInitialValues: any, flatUpdatedValues: any) => {
+                        return this.getDeletedFormValues(flatInitialValues, flatUpdatedValues);
+                    }
+                );
+
+                expiredFormValueIds = this.getIdsFromFormValues(expiredFormValues);
+                unexpiredFormValueIds = this.getIdsFromFormValues(unexpiredFormValues);
+                deletedFormValueIds = this.getIdsFromFormValues(deletedFormValues);
+            } else {
+                addedFormValues = this.getAddedFormValues(values[key]);
+                updatedFormValues = this.getUpdatedFormValues(initial[key], values[key]);
+                expiredFormValues = this.getExpiredFormValues(initial[key], values[key]);
+                unexpiredFormValues = this.getUnexpiredFormValues(initial[key], values[key]);
+                deletedFormValues = this.getDeletedFormValues(initial[key], values[key]);
+
+                expiredFormValueIds = this.getIdsFromFormValues(expiredFormValues);
+                unexpiredFormValueIds = this.getIdsFromFormValues(unexpiredFormValues);
+                deletedFormValueIds = this.getIdsFromFormValues(deletedFormValues);
+            }
+
+            const diff = {
+                added: addedFormValues,
+                updated: updatedFormValues,
+                expired: expiredFormValues,
+                expiredIds: expiredFormValueIds,
+                unexpired: unexpiredFormValues,
+                unexpiredIds: unexpiredFormValueIds,
+                deleted: deletedFormValues,
+                deletedIds: deletedFormValueIds
+            };
+
+            if (formKey && formKey === key) {
+                map[key] = diff;
+            } else if (!formKey) {
+                map[key] = diff;
+            }
+        });
+
+        return formKey ? map[formKey] as FormValues : map as FormValuesDiff;
     }
 
     async onSubmit(formValues: any, initialValues: any, dispatch: Dispatch<any>) {
-        const data: any = this.getDataFromFormValues(formValues, initialValues) || {};
-        const dataToDelete: any = this.getDataToDeleteFromFormValues(formValues, initialValues) || {};
+        const data: FormValuesDiff = this.getDataFromFormValues(formValues, initialValues) as FormValuesDiff;
 
         // Delete records before saving new ones!
-        const deletedRoles: IdType[] = dataToDelete.roles as IdType[];
-        const deletedRoleFrontendScopes: IdType[] = dataToDelete.roleFrontendScopes as IdType[];
-        const deletedRoleApiScopes: IdType[] = dataToDelete.roleApiScopes as IdType[];
+        const deletedRoles: IdType[] = data.roles.deletedIds as IdType[];
+        const deletedRoleFrontendScopes: IdType[] = data.roleFrontendScopesGrouped.deletedIds as IdType[];
+        const deletedRoleApiScopes: IdType[] = data.roleFrontendScopesGrouped.deletedIds as IdType[];
         // Important! We don't handle permissions the same way as the other deletes!
         const deletedRolePermissions: IdType[] = [] as IdType[];
 
-        const roles: Partial<Role>[] = (data.roles) ? data.roles.map((r: Role) => ({
-            ...r,
-            systemCodeInd: 0, // TODO: Ability to set this - we haven't implemented system codes yet but it will be needed
-            // TODO: Need a way to set this stuff... createdBy, updated by fields should really be set in the backend using the current user
-            // We're just going to set the fields here temporarily to quickly check if things are working in the meantime...
-            createdBy: 'DEV - FRONTEND',
-            updatedBy: 'DEV - FRONTEND',
-            createdDtm: new Date().toISOString(),
-            updatedDtm: new Date().toISOString(),
-            revisionCount: 0 // TODO: Is there entity versioning anywhere in this project???
-        })) : [];
+        const roles: Partial<Role>[] = (data.roles)
+            ? [
+                ...data.roles.added,
+                ...data.roles.updated
+            ].map((r: Role) => ({
+                ...r,
+                systemCodeInd: 0, // TODO: Ability to set this - we haven't implemented system codes yet but it will be needed
+                // TODO: Need a way to set this stuff... createdBy, updated by fields should really be set in the backend using the current user
+                // We're just going to set the fields here temporarily to quickly check if things are working in the meantime...
+                createdBy: 'DEV - FRONTEND',
+                updatedBy: 'DEV - FRONTEND',
+                createdDtm: new Date().toISOString(),
+                updatedDtm: new Date().toISOString(),
+                revisionCount: 0 // TODO: Is there entity versioning anywhere in this project???
+            }))
+            : [];
 
         const roleFrontendScopes: Partial<RoleFrontendScope>[] = (data.roleFrontendScopesGrouped)
             ? Object.keys(data.roleFrontendScopesGrouped)

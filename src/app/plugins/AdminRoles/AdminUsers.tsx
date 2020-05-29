@@ -611,28 +611,27 @@ export default class AdminUsers extends FormContainerBase<AdminUsersProps> {
         };
     }
 
-    getDataFromFormValues(formValues: {}, initialValues: {}) {
-        return super.getDataFromFormValues(formValues, initialValues) || {};
-    }
-
     async onSubmit(formValues: any, initialValues: any, dispatch: Dispatch<any>) {
-        const data: FormValuesDiff = this.getDataFromFormValues(formValues, initialValues) as FormValuesDiff;
+        const data: FormValuesDiff = this.getDataFromFormValues(
+            formValues,
+            initialValues,
+            ['userRolesGrouped']
+        ) as FormValuesDiff;
 
-        // Delete records before saving new ones!
         const deletedUsers: IdType[] = data.users.deletedIds as IdType[];
-        const deletedUserRoles: IdType[] = data.userRoles.deletedIds as IdType[];
-
-        // Expire records before saving new ones!
+        const deletedUserRoles: IdType[] = data.userRolesGrouped.deletedIds as IdType[];
         const expiredUsers: IdType[] = data.users.expiredIds as IdType[];
-        const expiredUserRoles: IdType[] = data.userRoles.expiredIds as IdType[];
+        const expiredUserRoles: IdType[] = data.userRolesGrouped.expiredIds as IdType[];
         const unexpiredUsers: IdType[] = data.users.unexpiredIds as IdType[];
-        const unexpiredUserRoles: IdType[] = data.userRoles.unexpiredIds as IdType[];
+        const unexpiredUserRoles: IdType[] = data.userRolesGrouped.unexpiredIds as IdType[];
 
-        const users: Partial<User>[] = (data.users)
-            ? [
-                ...data.users.added,
-                ...data.users.updated
-            ].map((u: User) => ({
+        const usersData = [
+            ...data.users.added,
+            ...data.users.updated
+        ];
+
+        const users: Partial<User>[] = (usersData)
+            ? usersData.map((u: User) => ({
                 ...u,
                 // TODO: Need a way to set this stuff...
                 //  createdBy, updated by fields should really be set in the backend using the current user
@@ -646,12 +645,17 @@ export default class AdminUsers extends FormContainerBase<AdminUsersProps> {
             }))
             : [];
 
-        const userRoles: Partial<UserRole>[] = (data.userRolesGrouped)
-            ? Object.keys(data.userRolesGrouped)
+        const userRolesData = {
+            ...data.userRolesGrouped.added,
+            ...data.userRolesGrouped.updated
+        };
+
+        const userRoles: Partial<UserRole>[] = (userRolesData)
+            ? Object.keys(userRolesData)
                 .reduce((acc, cur, idx) => {
                     return acc
                         .concat(
-                            data.userRolesGrouped[cur]
+                            userRolesData[cur]
                                 .map((ur: UserRole) => {
                                     ur.userId = cur; // Set user ids on all rows, we need it set on new rows
                                     return ur;

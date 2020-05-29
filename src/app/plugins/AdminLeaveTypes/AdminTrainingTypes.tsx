@@ -268,17 +268,10 @@ export default class AdminTrainingTypes extends FormContainerBase<AdminTrainingT
         };
     }
 
-    getDataFromFormValues(formValues: {}, initialValues: {}) {
-        return super.getDataFromFormValues(formValues, initialValues) || {};
-    }
-
     async onSubmit(formValues: any, initialValues: any, dispatch: Dispatch<any>) {
         const data: FormValuesDiff = this.getDataFromFormValues(formValues, initialValues) as FormValuesDiff;
 
-        // Delete records before saving new ones!
         const deletedLeaveTypes: IdType[] = data.trainingLeaveTypes.deletedIds as IdType[];
-
-        // Expire records before saving new ones!
         const expiredLeaveTypes: IdType[] = data.trainingLeaveTypes.expiredIds as IdType[];
         const unexpiredLeaveTypes: IdType[] = data.trainingLeaveTypes.unexpiredIds as IdType[];
 

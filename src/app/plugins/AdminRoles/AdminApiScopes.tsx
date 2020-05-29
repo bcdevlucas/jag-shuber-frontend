@@ -163,20 +163,17 @@ export default class AdminApiScopes extends FormContainerBase<AdminApiScopesProp
         };
     }
 
-    getDataFromFormValues(formValues: {}, initialValues: {}) {
-        return super.getDataFromFormValues(formValues, initialValues) || {};
-    }
-
     async onSubmit(formValues: any, initialValues: any, dispatch: Dispatch<any>) {
         const data: FormValuesDiff = this.getDataFromFormValues(formValues, initialValues) as FormValuesDiff;
 
-        // Delete records before saving new ones!
         const deletedScopes: IdType[] = data.apiScopes.deletedIds as IdType[];
 
-        const scopes: Partial<ApiScope>[] = [
+        const scopesData = [
             ...data.apiScopes.added,
             ...data.apiScopes.updated
-        ].map((s: ApiScope) => ({
+        ];
+
+        const scopes: Partial<ApiScope>[] = scopesData.map((s: ApiScope) => ({
             ...s,
             // TODO: In some places there's a systemCodeInd which is a number... maybe a good idea to use the same type?
             systemScopeInd: false, // TODO: Ability to set this - we haven't implemented system codes yet but it will be needed

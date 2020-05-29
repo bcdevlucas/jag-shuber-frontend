@@ -303,20 +303,13 @@ export default class AdminCourtRoles extends FormContainerBase<AdminCourtRolesPr
         };
     }
 
-    getDataFromFormValues(formValues: {}, initialValues: {}) {
-        return super.getDataFromFormValues(formValues, initialValues) || {};
-    }
-
     async onSubmit(formValues: any, initialValues: any, dispatch: Dispatch<any>) {
         const data: FormValuesDiff = this.getDataFromFormValues(formValues, initialValues) as FormValuesDiff;
 
         // Grab the currentLocation off of the formValues.assignments object
         const { currentLocation } = formValues.assignments;
 
-        // Delete records before saving new ones!
         const deletedCourtRoles: IdType[] = data.courtRoles.deletedIds as IdType[];
-
-        // Expire records before saving new ones!
         const expiredCourtRoles: IdType[] = data.courtRoles.expiredIds as IdType[];
         const unexpiredCourtRoles: IdType[] = data.courtRoles.unexpiredIds as IdType[];
 

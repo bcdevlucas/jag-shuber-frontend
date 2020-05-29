@@ -309,20 +309,13 @@ export default class AdminEscortTypes extends FormContainerBase<AdminEscortTypes
         };
     }
 
-    getDataFromFormValues(formValues: {}, initialValues: {}) {
-        return super.getDataFromFormValues(formValues, initialValues) || {};
-    }
-
     async onSubmit(formValues: any, initialValues: any, dispatch: Dispatch<any>) {
         const data: FormValuesDiff = this.getDataFromFormValues(formValues, initialValues) as FormValuesDiff;
 
         // Grab the currentLocation off of the formValues.assignments object
         const { currentLocation } = formValues.assignments;
 
-        // Delete records before saving new ones!
         const deletedEscortTypes: IdType[] = data.escortTypes.deletedIds as IdType[];
-
-        // Expire records before saving new ones!
         const expiredEscortTypes: IdType[] = data.escortTypes.expiredIds as IdType[];
         const unexpiredEscortTypes: IdType[] = data.escortTypes.unexpiredIds as IdType[];
 

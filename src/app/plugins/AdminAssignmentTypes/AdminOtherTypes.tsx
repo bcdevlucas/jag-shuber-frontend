@@ -303,20 +303,13 @@ export default class AdminOtherTypes extends FormContainerBase<AdminOtherTypesPr
         };
     }
 
-    getDataFromFormValues(formValues: {}, initialValues: {}) {
-        return super.getDataFromFormValues(formValues, initialValues) || {};
-    }
-
     async onSubmit(formValues: any, initialValues: any, dispatch: Dispatch<any>) {
         const data: FormValuesDiff = this.getDataFromFormValues(formValues, initialValues) as FormValuesDiff;
 
         // Grab the currentLocation off of the formValues.assignments object
         const { currentLocation } = formValues.assignments;
 
-        // Delete records before saving new ones!
         const deletedOtherTypes: IdType[] = data.otherTypes.deletedIds as IdType[];
-
-        // Expire records before saving new ones!
         const expiredOtherTypes: IdType[] = data.otherTypes.expiredIds as IdType[];
         const unexpiredOtherTypes: IdType[] = data.otherTypes.unexpiredIds as IdType[];
 

@@ -303,20 +303,13 @@ export default class AdminJailRoles extends FormContainerBase<AdminJailRolesProp
         };
     }
 
-    getDataFromFormValues(formValues: {}, initialValues: {}) {
-        return super.getDataFromFormValues(formValues, initialValues) || {};
-    }
-
     async onSubmit(formValues: any, initialValues: any, dispatch: Dispatch<any>) {
         const data: FormValuesDiff = this.getDataFromFormValues(formValues, initialValues) as FormValuesDiff;
 
         // Grab the currentLocation off of the formValues.assignments object
         const { currentLocation } = formValues.assignments;
 
-        // Delete records before saving new ones!
         const deletedJailRoles: IdType[] = data.jailRoles.deletedIds as IdType[];
-
-        // Expire records before saving new ones!
         const expiredJailRoles: IdType[] = data.jailRoles.expiredIds as IdType[];
         const unexpiredJailRoles: IdType[] = data.jailRoles.unexpiredIds as IdType[];
 
